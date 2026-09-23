@@ -1,5 +1,6 @@
 use std::process::Command;
 use std::path::{Path, PathBuf};
+use std::error::Error;
 
 use clap::{Parser, Subcommand, Args};
 
@@ -28,26 +29,26 @@ struct LaunchArgs {
 
 // convert unix path to Z:\ structure
 trait WinePath {
-    fn to_wine_path(&self) -> String;
+    fn to_wine_path(&self) -> Result<String, Box<dyn Error>> ;
 }
 
 impl WinePath for Path {
-    fn to_wine_path(&self) -> String {
+    fn to_wine_path(&self) -> Result<String, Box<dyn Error>> {
         let abspath = self.canonicalize()
-            .unwrap()
+            .map_err(|e| format!("{path}: {e}", path = self.to_string_lossy()))?
             .display()
             .to_string();
 
-        format!("Z:{}", abspath.replace("/", "\\"))
+        Ok(format!("Z:{}", abspath.replace("/", "\\")))
     }
 }
 
 // generate server command in `serverdir` using config in `configdir`
-fn server_command(serverdir: String, configdir: &Path) -> Command {
+fn server_command(serverdir: String, configdir: &Path) -> Result<Command, Box<dyn Error>> {
     let mut cmd = Command::new("wine");
 
-    let configjson = configdir.join("settings.json").to_wine_path();
-    let seasonjson = configdir.join("season.json").to_wine_path();
+    let configjson = configdir.join("settings.json").to_wine_path()?;
+    let seasonjson = configdir.join("season.json").to_wine_path()?;
 
     cmd.current_dir(serverdir)
         .arg("AssettoCorsaEVOServer.exe")
@@ -57,19 +58,19 @@ fn server_command(serverdir: String, configdir: &Path) -> Command {
         .arg(seasonjson)
         .arg("-no_lobby");
 
-    cmd
+    Ok(cmd)
 }
 
 
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let cli = CLI::parse();
     let serverdir = cli.serverdir.unwrap_or(".".to_string());
     match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir);
-            let mut server = Supervisor::new(server_command(serverdir, &configpath));
-            server.run();
+            let mut server = Supervisor::new(server_command(serverdir, &configpath)?);
+            return server.run();
         }
     }
 }

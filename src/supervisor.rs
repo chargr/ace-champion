@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::error::Error;
 
 pub struct Supervisor {
     command: Command, 
@@ -11,7 +12,7 @@ impl Supervisor {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         let args: String = self.command.get_args()
             .map(|x| x.to_string_lossy())
             .collect::<Vec<_>>()
@@ -21,13 +22,9 @@ impl Supervisor {
 
         println!("Exectuing: {} {}", prog, args);
 
-        let cmd = self.command.spawn();
+        let mut child = self.command.spawn()?;
 
-        let mut child = match cmd {
-            Ok(child) => child,
-            Err(_) => return,
-        };
-
-        let _ = child.wait();
+        let _ = child.wait()?;
+        Ok(())
     }
 }
