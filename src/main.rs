@@ -4,7 +4,9 @@ use std::error::Error;
 
 use clap::{Parser, Subcommand, Args};
 
-use ace_champion::supervisor::Supervisor;
+mod server;
+
+use server::Supervisor;
 
 #[derive(Parser)]
 struct CLI {
