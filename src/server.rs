@@ -19,7 +19,7 @@ impl WinePath for Path {
 }
 
 // generate server command in `serverdir` using config in `configdir`
-pub fn server_command(serverdir: String, configdir: &Path) -> Result<Command, Box<dyn Error>> {
+pub fn server_command(serverdir: &Path, configdir: &Path) -> Result<Command, Box<dyn Error>> {
     let mut cmd = Command::new("wine");
 
     let configjson = configdir.join("settings.json").to_wine_path()?;

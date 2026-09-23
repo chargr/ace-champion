@@ -30,11 +30,12 @@ struct LaunchArgs {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = CLI::parse();
-    let serverdir = cli.serverdir.unwrap_or(".".to_string());
+    let serverdir = Path::new(&cli.serverdir.unwrap_or(".".to_string())).canonicalize()?;
+
     match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir);
-            let mut server = Supervisor::new(server::server_command(serverdir, &configpath)?);
+            let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?);
             return server.run();
         }
     }
