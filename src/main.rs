@@ -31,14 +31,14 @@ trait WinePath {
     fn to_wine_path(&self) -> String;
 }
 
-impl WinePath for PathBuf {
+impl WinePath for Path {
     fn to_wine_path(&self) -> String {
         self.display().to_string().replace("/", "\\")
     }
 }
 
 // generate server command in `serverdir` using config in `configdir`
-fn server_command(serverdir: String, configdir: PathBuf) -> Command {
+fn server_command(serverdir: String, configdir: &Path) -> Command {
     let mut cmd = Command::new("wine");
 
     let configjson = configdir.join("settings.json").to_wine_path();
@@ -63,7 +63,7 @@ fn main() {
     match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir).canonicalize().unwrap();
-            let mut server = Supervisor::new(server_command(serverdir, configpath));
+            let mut server = Supervisor::new(server_command(serverdir, &configpath));
             server.run();
         }
     }
