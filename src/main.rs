@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand, Args};
 
@@ -22,30 +23,47 @@ enum Commands {
 
 #[derive(Args)]
 struct LaunchArgs {
-    configdir: String
+    configdir: PathBuf,
+}
+
+// convert unix path to Z:\ structure
+trait WinePath {
+    fn to_wine_path(&self) -> String;
+}
+
+impl WinePath for PathBuf {
+    fn to_wine_path(&self) -> String {
+        self.display().to_string().replace("/", "\\")
+    }
 }
 
 // generate server command in `serverdir` using config in `configdir`
-fn server_command(serverdir: String, configdir: String) -> Command {
+fn server_command(serverdir: String, configdir: PathBuf) -> Command {
     let mut cmd = Command::new("wine");
+
+    let configjson = configdir.join("settings.json").to_wine_path();
+    let seasonjson = configdir.join("season.json").to_wine_path();
 
     cmd.current_dir(serverdir)
         .arg("AssettoCorsaEVOServer.exe")
         .arg("-configjson")
-        .arg(format!("{configdir}/settings.json"))
+        .arg(configjson)
         .arg("-seasonjson")
-        .arg(format!("{configdir}/season.json"))
+        .arg(seasonjson)
         .arg("-no_lobby");
 
     cmd
 }
+
+
 
 fn main() {
     let cli = CLI::parse();
     let serverdir = cli.serverdir.unwrap_or(".".to_string());
     match cli.command {
         Commands::Launch(args) => {
-            let mut server = Supervisor::new(server_command(serverdir, args.configdir));
+            let configpath = Path::new(&args.configdir).canonicalize().unwrap();
+            let mut server = Supervisor::new(server_command(serverdir, configpath));
             server.run();
         }
     }
