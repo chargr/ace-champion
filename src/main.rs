@@ -33,7 +33,12 @@ trait WinePath {
 
 impl WinePath for Path {
     fn to_wine_path(&self) -> String {
-        self.display().to_string().replace("/", "\\")
+        let abspath = self.canonicalize()
+            .unwrap()
+            .display()
+            .to_string();
+
+        format!("Z:{}", abspath.replace("/", "\\"))
     }
 }
 
@@ -62,7 +67,7 @@ fn main() {
     let serverdir = cli.serverdir.unwrap_or(".".to_string());
     match cli.command {
         Commands::Launch(args) => {
-            let configpath = Path::new(&args.configdir).canonicalize().unwrap();
+            let configpath = Path::new(&args.configdir);
             let mut server = Supervisor::new(server_command(serverdir, &configpath));
             server.run();
         }
