@@ -109,7 +109,7 @@ impl Supervisor {
                 writeln!(log, "Executing: {} {} in {}", prog, args, cwd)?;
 
                 let mut server = self.command.spawn()?;
-                let server_pid = Pid::from_raw(server.id() as i32);
+                let server_pid = Pid::from_raw(i32::try_from(server.id())?);
 
                 //signal thread
                 let mut signals = Signals::new([SIGINT, SIGTERM])?;
