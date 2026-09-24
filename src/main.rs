@@ -35,7 +35,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir);
-            let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?);
+            let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
+            let logfile = configpath.canonicalize()?.join("ace-champ.log");
+
+            let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?, pidfile, logfile);
             return server.run();
         }
     }

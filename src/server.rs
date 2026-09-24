@@ -1,6 +1,14 @@
 use std::process::Command;
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::io::{BufReader, BufRead};
+use std::process::Stdio;
+
+use nix::unistd::{fork, ForkResult};
 
 // convert unix path to Z:\ structure
 trait WinePath {
@@ -37,29 +45,87 @@ pub fn server_command(serverdir: &Path, configdir: &Path) -> Result<Command, Box
 }
 
 pub struct Supervisor {
-    command: Command, 
+    command: Command,
+    pidfile: PathBuf,
+    logfile: PathBuf,
 }
 
 impl Supervisor {
-    pub fn new(command: Command) -> Self {
+    pub fn new(command: Command, pidfile: PathBuf, logfile: PathBuf) -> Self {
         Self {
             command,
+            pidfile,
+            logfile,
         }
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+
+        // gather up original commands for display
+        let prog = self.command.get_program().to_string_lossy().to_string();
         let args: String = self.command.get_args()
             .map(|x| x.to_string_lossy())
             .collect::<Vec<_>>()
             .join(" ");
 
-        let prog = self.command.get_program().to_string_lossy();
+        let cwd = match self.command.get_current_dir() {
+            Some(path) => path.to_string_lossy().to_string(),
+            None => "(unset)".to_string(),
+        };
 
-        println!("Exectuing: {} {}", prog, args);
+        match unsafe{fork()?} {
+            ForkResult::Parent { child } => {
+                let mut file = File::create(&self.pidfile)?;
+                writeln!(file, "{}", child.as_raw())?;
+                drop(file);
 
-        let mut child = self.command.spawn()?;
+                println!("forked supervisor to {}", child);
 
-        let _ = child.wait()?;
-        Ok(())
+                Ok(())
+            },
+            ForkResult::Child => {
+                nix::unistd::setsid()?;
+                // create and open log file
+                let mut log = OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open(&self.logfile)?;
+
+                // setup pipe to capture and log
+                let (reader, writer) = std::io::pipe()?;
+
+                self.command
+                    .stdin(Stdio::null())
+                    .stderr(writer.try_clone()?)
+                    .stdout(writer);
+
+                writeln!(log, "--- server start ---")?;
+                writeln!(log, "Executing: {} {} in {}", prog, args, cwd)?;
+
+                let mut server = self.command.spawn()?;
+
+                self.command
+                    .stderr(Stdio::null())
+                    .stdout(Stdio::null());
+
+                let mut reader = BufReader::new(reader);
+                let mut buf = Vec::new();
+
+                while reader.read_until(b'\n', &mut buf)? > 0 {
+                    let line = String::from_utf8_lossy(&buf);
+                    write!(log, "{line}")?;
+                    buf.clear();
+                }
+
+                for line in BufReader::new(reader).lines().map_while(Result::ok) {
+                    let _ = writeln!(log, "{line}");
+                }
+
+                server.wait()?;
+                writeln!(log, "--- server stop ---")?;
+
+                std::process::exit(0)
+            },
+        }
     }
 }
