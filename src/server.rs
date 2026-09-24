@@ -1,14 +1,19 @@
 use std::process::Command;
 use std::error::Error;
 use std::path::{Path, PathBuf};
-
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::io::{BufReader, BufRead};
 use std::process::Stdio;
+use std::thread;
 
 use nix::unistd::{fork, ForkResult};
+
+use nix::unistd::Pid;
+use nix::sys::signal::{kill, Signal};
+use signal_hook::iterator::Signals;
+use signal_hook::consts::{SIGINT, SIGTERM};
 
 // convert unix path to Z:\ structure
 trait WinePath {
@@ -85,6 +90,7 @@ impl Supervisor {
             },
             ForkResult::Child => {
                 nix::unistd::setsid()?;
+
                 // create and open log file
                 let mut log = OpenOptions::new()
                     .append(true)
@@ -103,6 +109,25 @@ impl Supervisor {
                 writeln!(log, "Executing: {} {} in {}", prog, args, cwd)?;
 
                 let mut server = self.command.spawn()?;
+                let server_pid = Pid::from_raw(server.id() as i32);
+
+                //signal thread
+                let mut signals = Signals::new([SIGINT, SIGTERM])?;
+
+                let thread_log = log.try_clone()?;
+                thread::spawn(move || {
+                    for sig in signals.forever() {
+                        match sig {
+                            SIGINT | SIGTERM => {
+                                let _ = writeln!(&thread_log, "--- recieved {sig} ---");
+                                if let Ok(signal) = Signal::try_from(sig) {
+                                    let _ = kill(server_pid, signal);
+                                }
+                            },
+                            _ => {},
+                        }
+                    }
+                });
 
                 self.command
                     .stderr(Stdio::null())
