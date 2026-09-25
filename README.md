@@ -13,8 +13,8 @@ A pid and log will also be created in this directory.
 # launch server
 ace-champ -S /data/steam/AC-EVO-Server/ launch pcup-test/
 
-# kill server (signal passed to AssettoCorsaEVOServer.exe)
-kill `cat pcup-test/ace-champ.pid`
+# stop server
+ace-champ stop pcup-test/
 ```
 
 ## Installation
