@@ -43,8 +43,7 @@ pub fn server_command(serverdir: &Path, configdir: &Path) -> Result<Command, Box
         .arg("-configjson")
         .arg(configjson)
         .arg("-seasonjson")
-        .arg(seasonjson)
-        .arg("-no_lobby");
+        .arg(seasonjson);
 
     Ok(cmd)
 }
