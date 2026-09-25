@@ -107,7 +107,14 @@ impl Supervisor {
                 writeln!(log, "--- server start ---")?;
                 writeln!(log, "Executing: {} {} in {}", prog, args, cwd)?;
 
-                let mut server = self.command.spawn()?;
+                let mut server = match self.command.spawn() {
+                    Ok(server) => server,
+                    Err(e) => {
+                        let msg = format!("Unable to execute {prog}: {e}");
+                        writeln!(log, "{msg}")?;
+                        return Err(msg.into());
+                    }
+                };
                 let server_pid = Pid::from_raw(i32::try_from(server.id())?);
 
                 //signal thread
