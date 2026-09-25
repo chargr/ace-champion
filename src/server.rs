@@ -48,6 +48,12 @@ pub fn server_command(serverdir: &Path, configdir: &Path) -> Result<Command, Box
     Ok(cmd)
 }
 
+pub fn server_stop(pidfile: &Path) -> Result<(), Box<dyn Error>> {
+    let pid = Pid::from_raw(std::fs::read_to_string(pidfile)?.trim().parse::<i32>()?);
+    kill(pid, nix::sys::signal::SIGTERM)?;
+    Ok(())
+}
+
 pub struct Supervisor {
     command: Command,
     pidfile: PathBuf,

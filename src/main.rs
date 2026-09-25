@@ -21,6 +21,7 @@ struct CLI {
 #[derive(Subcommand)]
 enum Commands {
     Launch(LaunchArgs),
+    Stop(LaunchArgs),
 }
 
 #[derive(Args)]
@@ -40,6 +41,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?, pidfile, logfile);
             return server.run();
-        }
+        },
+        Commands::Stop(args) => {
+            let configpath = Path::new(&args.configdir);
+            let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
+
+            server::server_stop(&pidfile)
+        },
     }
 }
