@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let logfile = configpath.canonicalize()?.join("ace-champ.log");
 
             let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?, pidfile, logfile);
-            return server.run();
+            server.run()
         },
         Commands::Stop(args) => {
             let configpath = Path::new(&args.configdir);
