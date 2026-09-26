@@ -33,24 +33,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cli = CLI::parse();
     let serverdir = Path::new(&cli.serverdir.unwrap_or(".".to_string())).canonicalize()?;
 
-    let result : Result<(), Box<dyn Error>>;
-
-    match cli.command {
+    let result : Result<(), Box<dyn Error>> = match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir);
             let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
             let logfile = configpath.canonicalize()?.join("ace-champ.log");
 
             let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?, pidfile, logfile);
-            result = server.run();
+            server.run()
         },
         Commands::Stop(args) => {
             let configpath = Path::new(&args.configdir);
             let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
 
-            result = server::server_stop(&pidfile);
+            server::server_stop(&pidfile)
         },
-    }
+    };
 
     result
 }
