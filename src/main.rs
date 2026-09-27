@@ -8,7 +8,7 @@ mod server;
 use server::{ServerProcess, Supervisor};
 
 #[derive(Parser)]
-struct CLI {
+struct Cli {
     #[command(subcommand)]
     command: Commands,
 
@@ -30,7 +30,7 @@ struct LaunchArgs {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let cli = CLI::parse();
+    let cli = Cli::parse();
     let serverdir = Path::new(&cli.serverdir.unwrap_or(".".to_string())).canonicalize()?;
 
     let result : Result<(), Box<dyn Error>> = match cli.command {
