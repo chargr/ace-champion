@@ -95,7 +95,6 @@ impl ServerProcess {
         command
             .current_dir(&self.install_dir)
             .arg("AssettoCorsaEVOServer.exe")
-            .arg("-no_lobby")
             .arg("-configjson")
             .arg(configjson)
             .arg("-seasonjson")
