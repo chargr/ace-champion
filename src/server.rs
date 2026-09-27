@@ -154,10 +154,6 @@ impl Supervisor {
                     buf.clear();
                 }
 
-                for line in BufReader::new(reader).lines().map_while(Result::ok) {
-                    let _ = writeln!(log, "{line}");
-                }
-
                 server.wait()?;
                 writeln!(log, "--- server stop ---")?;
 
