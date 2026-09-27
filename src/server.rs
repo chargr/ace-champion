@@ -1,4 +1,4 @@
-use std::process::{Command,Child};
+use std::process::{Command, Child, ExitStatus};
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::fs::File;
@@ -12,7 +12,7 @@ use nix::unistd::{fork, ForkResult};
 use nix::unistd::Pid;
 use nix::sys::signal::{kill, Signal};
 use signal_hook::iterator::Signals;
-use signal_hook::consts::{SIGINT, SIGTERM, SIGCHLD};
+use signal_hook::consts::{SIGINT, SIGTERM, SIGCHLD, SIGHUP};
 
 use simplelog::{WriteLogger,LevelFilter};
 
@@ -144,6 +144,14 @@ impl ServerProcess {
         self.start()?;
         Ok(())
     }
+
+    pub fn try_wait(&mut self) -> Result<Option<ExitStatus>, Box<dyn Error>> {
+        let Some(child) = self.child.as_mut() else {
+            return Ok(None);
+        };
+        let status = child.try_wait()?;
+        Ok(status)
+    }
 }
 
 pub struct Supervisor {
@@ -175,7 +183,7 @@ impl Supervisor {
                         File::options().create(true).append(true).open(&self.process.log_path())?)?;
 
                 //signal thread
-                let mut signals = Signals::new([SIGINT, SIGTERM, SIGCHLD])?;
+                let mut signals = Signals::new([SIGINT, SIGTERM, SIGCHLD, SIGHUP])?;
 
                 self.process.start()?;
 
@@ -186,8 +194,13 @@ impl Supervisor {
                             break;
                         }
                         SIGCHLD => {
-                            // if our child exits, we exit (for now)
-                            break;
+                            // check if our current child has exited
+                            if let Ok(Some(_)) = self.process.try_wait() {
+                                break;
+                            }
+                        }
+                        SIGHUP => {
+                            let _ = self.process.restart();
                         }
                         _ => {},
                     }
