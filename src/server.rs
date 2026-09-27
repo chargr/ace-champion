@@ -12,7 +12,7 @@ use nix::unistd::{fork, ForkResult};
 use nix::unistd::Pid;
 use nix::sys::signal::{kill, Signal};
 use signal_hook::iterator::Signals;
-use signal_hook::consts::{SIGINT, SIGTERM};
+use signal_hook::consts::{SIGINT, SIGTERM, SIGCHLD};
 
 use simplelog::{WriteLogger,LevelFilter};
 use log::{error, info, warn};
@@ -203,7 +203,7 @@ impl Supervisor {
                         File::options().create(true).append(true).open(&self.process.log_path())?)?;
 
                 //signal thread
-                let mut signals = Signals::new([SIGINT, SIGTERM])?;
+                let mut signals = Signals::new([SIGINT, SIGTERM, SIGCHLD])?;
 
                 self.process.start()?;
 
@@ -211,6 +211,10 @@ impl Supervisor {
                     match sig {
                         SIGINT | SIGTERM => {
                             let _ =  self.process.stop();
+                            break;
+                        }
+                        SIGCHLD => {
+                            // if our child exits, we exit (for now)
                             break;
                         }
                         _ => {},
