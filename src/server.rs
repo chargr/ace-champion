@@ -15,7 +15,6 @@ use signal_hook::iterator::Signals;
 use signal_hook::consts::{SIGINT, SIGTERM, SIGCHLD};
 
 use simplelog::{WriteLogger,LevelFilter};
-use log::{error, info, warn};
 
 // convert unix path to Z:\ structure
 trait WinePath {
@@ -31,23 +30,6 @@ impl WinePath for Path {
 
         Ok(format!("Z:{}", abspath.replace("/", "\\")))
     }
-}
-
-// generate server command in `serverdir` using config in `configdir`
-pub fn server_command(serverdir: &Path, configdir: &Path) -> Result<Command, Box<dyn Error>> {
-    let mut cmd = Command::new("wine");
-
-    let configjson = configdir.join("settings.json").to_wine_path()?;
-    let seasonjson = configdir.join("season.json").to_wine_path()?;
-
-    cmd.current_dir(serverdir)
-        .arg("AssettoCorsaEVOServer.exe")
-        .arg("-configjson")
-        .arg(configjson)
-        .arg("-seasonjson")
-        .arg(seasonjson);
-
-    Ok(cmd)
 }
 
 pub fn server_stop(pidfile: &Path) -> Result<(), Box<dyn Error>> {
@@ -148,11 +130,6 @@ impl ServerProcess {
         Ok(())
     }
 
-    pub fn wait(&mut self) -> Result<(), Box<dyn Error>> {
-        let Some(mut child) = self.child.take() else { return Ok(()); };
-        let _ = child.wait();
-        Ok(())
-    }
     pub fn stop(&mut self) -> Result<(), Box<dyn Error>> {
         let Some(mut child) = self.child.take() else { return Ok(()) };
         log::info!("--- server stop ---");
