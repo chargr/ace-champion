@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand, Args};
 
 mod server;
 
-use server::Supervisor;
+use server::{ServerProcess, Supervisor};
 
 #[derive(Parser)]
 struct CLI {
@@ -36,15 +36,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let result : Result<(), Box<dyn Error>> = match cli.command {
         Commands::Launch(args) => {
             let configpath = Path::new(&args.configdir);
-            let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
-            let logfile = configpath.canonicalize()?.join("ace-champ.log");
-
-            let mut server = Supervisor::new(server::server_command(&serverdir, &configpath)?, pidfile, logfile);
-            server.run()
+            let mut supervisor = Supervisor::new(
+                ServerProcess::new(serverdir, configpath.to_path_buf())?
+            );
+            supervisor.run()
         },
         Commands::Stop(args) => {
             let configpath = Path::new(&args.configdir);
-            let pidfile = configpath.canonicalize()?.join("ace-champ.pid");
+            let pidfile = configpath.canonicalize()?.join("server.pid");
 
             server::server_stop(&pidfile)
         },
