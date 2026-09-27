@@ -9,5 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
+log = "0.4.34"
 nix = { version = "0.31.3", features = ["process", "signal"] }
 signal-hook = "0.4.4"
+simplelog = "0.12.2"
