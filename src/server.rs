@@ -85,7 +85,7 @@ impl ServerProcess {
         &self.log_path
     }
 
-    fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn start(&mut self) -> Result<(), Box<dyn Error>> {
         let configjson = self.server_dir.join("settings.json").to_wine_path()?;
         let seasonjson = self.server_dir.join("season.json").to_wine_path()?;
 
@@ -146,11 +146,6 @@ impl ServerProcess {
         });
 
         Ok(())
-    }
-
-    pub fn start(&mut self) -> Result<(), Box<dyn Error>> {
-        log::info!("--- server starting ---");
-        self.run()
     }
 
     pub fn wait(&mut self) -> Result<(), Box<dyn Error>> {
