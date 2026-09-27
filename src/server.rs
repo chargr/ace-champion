@@ -155,7 +155,7 @@ impl ServerProcess {
     }
     pub fn stop(&mut self) -> Result<(), Box<dyn Error>> {
         let Some(mut child) = self.child.take() else { return Ok(()) };
-        log::info!("--- server stopping ---");
+        log::info!("--- server stop ---");
         let pid = Pid::from_raw(i32::try_from(child.id())?);
         kill(pid, Signal::SIGINT)?;
         child.wait()?;
