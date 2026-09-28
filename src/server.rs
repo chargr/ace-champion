@@ -32,12 +32,6 @@ impl WinePath for Path {
     }
 }
 
-pub fn server_stop(pidfile: &Path) -> Result<(), Box<dyn Error>> {
-    let pid = Pid::from_raw(std::fs::read_to_string(pidfile)?.trim().parse::<i32>()?);
-    kill(pid, nix::sys::signal::SIGTERM)?;
-    Ok(())
-}
-
 pub struct ServerProcess {
     install_dir: PathBuf, // install directory containing server binaries
     server_dir: PathBuf, // path containing config and and outputs

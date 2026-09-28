@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
 use std::error::Error;
 
+use nix::sys::signal::{kill};
+use nix::unistd::Pid;
+use nix::sys::signal::{SIGTERM, SIGHUP};
+
 use clap::{Parser, Subcommand, Args};
 
 mod server;
@@ -11,42 +15,63 @@ use server::{ServerProcess, Supervisor};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-
-    /// execute server in this directory
-    #[arg(short = 'S', long)]
-    serverdir: Option<String>,
-
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    Launch(LaunchArgs),
-    Stop(LaunchArgs),
+    Start {
+        #[command(flatten)]
+        common: CommonArgs,
+
+        #[command(flatten)]
+        start: StartArgs,
+    },
+    Stop(CommonArgs),
+    Restart(CommonArgs),
 }
 
 #[derive(Args)]
-struct LaunchArgs {
-    configdir: PathBuf,
+struct StartArgs {
+    /// change to dir before executing AssettoCorsaServer.exe
+    #[arg(short = 'S', long)]
+    server_dir: Option<String>,
+}
+
+#[derive(Args)]
+struct CommonArgs{
+    /// directory containing server config and output
+    config_dir: PathBuf,
+}
+
+impl CommonArgs {
+    fn pid_path(&self) -> Result<PathBuf, Box<dyn Error>> {
+        Ok(self.config_dir.canonicalize()?.join("server.pid"))
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-    let serverdir = Path::new(&cli.serverdir.unwrap_or(".".to_string())).canonicalize()?;
 
     let result : Result<(), Box<dyn Error>> = match cli.command {
-        Commands::Launch(args) => {
-            let configpath = Path::new(&args.configdir);
+        Commands::Start{common , start} => {
+            let install_dir = Path::new(&start.server_dir.unwrap_or(".".to_string())).canonicalize()?;
             let mut supervisor = Supervisor::new(
-                ServerProcess::new(serverdir, configpath.to_path_buf())?
+                ServerProcess::new(install_dir, common.config_dir)?
             );
             supervisor.run()
         },
         Commands::Stop(args) => {
-            let configpath = Path::new(&args.configdir);
-            let pidfile = configpath.canonicalize()?.join("server.pid");
-
-            server::server_stop(&pidfile)
+            let pidfile = args.pid_path()?;
+            let pid = std::fs::read_to_string(&pidfile)?.trim().parse::<i32>()?;
+            kill(Pid::from_raw(pid), SIGTERM)?;
+            Ok(())
         },
+        Commands::Restart(args) => {
+            let pidfile = args.pid_path()?;
+            let pid = std::fs::read_to_string(&pidfile)?.trim().parse::<i32>()?;
+            kill(Pid::from_raw(pid), SIGHUP)?;
+            Ok(())
+        }
     };
 
     result
