@@ -3,18 +3,21 @@ ACE Champion is a dedicated server manager for Assetto Corsa EVO.
 
 ## Usage
 ```
-ace-champ -S /path/to/server/install launch cfg/
+ace-champ start -S /path/to/server/install cfg/
 ```
 where `cfg/` is the a directory containing settings.json (`-configjson`) and season.json (`-seasonjson`)
 A pid and log will also be created in this directory.
 
 ### Examples
 ```
-# launch server
-ace-champ -S /data/steam/AC-EVO-Server/ launch pcup-test/
+# launch server installed in /data/steam/AC-EVO-Server
+ace-champ start -S /data/steam/AC-EVO-Server/ pcup-test/
 
 # stop server
 ace-champ stop pcup-test/
+
+# restart server
+ace-champ restart pcup-test/
 ```
 
 ## Installation
@@ -28,7 +31,6 @@ To install other locations override PREFIX
 ```
 make install PREFIX=/path/to/install
 ```
-
 
 ## Features
 * launch via wine and fork to background
